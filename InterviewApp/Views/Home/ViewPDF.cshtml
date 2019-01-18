@@ -1,0 +1,105 @@
+﻿
+@{
+    Layout = null;
+    ViewData["Title"] = "ViewPDF";
+}
+
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <title>DocSpace&#x2122; Reader Plus Sample</title>
+    <!-- jQuery -->
+    <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+    <script type="text/javascript" src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+    <link rel="stylesheet" href="//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css" />
+    <!-- SVG -->
+    <script type="text/javascript" src="http://localhost:62625/ReaderPlus/GetResources?resourceName=P3Rest.ReaderPlusAgent.Resources.Scripts.Production.svg.min.js"></script>
+    <!-- Reader Plus -->
+    <script type="text/javascript" src="http://localhost:62625/ReaderPlus/GetResources?resourceName=P3Rest.ReaderPlusAgent.Resources.Scripts.Production.readerplus.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="http://localhost:62625/ReaderPlus/GetResources?resourceName=P3Rest.ReaderPlusAgent.Resources.Styles.readerplus.css">
+    
+    
+    <script>
+        window.onload = function () {
+
+            // Initialization settings
+            readerplus.initializeSettings({
+                protocol: "http",
+                hostname: 'localhost',
+                port: 62625,
+                language: 'en',
+            });
+
+            readerplus.Document.addEventListener("load", function () {
+
+                // add new section in File
+                readerplus.mainmenu.File.addSection("newSection");
+	   
+                // add new menu in File
+                readerplus.mainmenu.File.newSection.addItem("Custom", "Custom", "/images/save_icon.png", false, "", "", function () {
+	   		
+                    readerplus.Document.save();
+                    readerplus.Document.print();
+                });
+
+            });
+
+            // Document can be saved to any location when it is submitted by a user
+            readerplus.Document.addEventListener("submit", function (strResult) {
+                var result = JSON.parse(strResult);
+                if (result.Status === 0) {
+                    // Open the submitted document in another tab and redirect to thankyou.html
+                    var submittedPDFData = result.Details;
+                    let pdfwindow = window.open("");
+                    pdfwindow.document.write("<iframe width='100%' height='100%' src='data:application/pdf;base64, " + encodeURI(submittedPDFData) + "'></iframe>");
+                    window.location = "thankyou.html";
+                }
+                else {
+                    // Display alert on error
+                    alert('Document failed to submit!')
+                    console.error(result.Details);
+                }
+            });
+
+            // Open document
+            $.ajax({
+                type: "POST",
+                url: "GetPdfData",
+                data: "{}",
+                dataType: "json",
+                contentType: "application/json; charset=utf-8",
+                async: false,
+                success: function (data) {
+                    // Document settings
+                    var isMasterDocument = 1;
+                    var editMode = 1;
+
+                    // Upload the document into the viewer
+                    var result = readerplus.Document.upload(data, isMasterDocument, editMode, "", "DocumentName.pdf");
+                    if (result.Status === 0) {
+                        // Save document ID in order to reopen a document from the Reader Plus data store
+                        var docID = readerplus.Document.getDocumentID();
+                        // Open document in edit mode
+                        readerplus.Document.edit(docID);
+                    }
+                    else {
+                        // Display alert on error
+                        alert('Document failed to open!')
+                        console.error(result.Details);
+                    }
+                },
+                error: function (xhr, status, error) {
+                    console.error(error);
+                    alert("Document failed to open!");
+                }
+            });
+
+        }
+    </script>
+</head>
+<body>
+    
+    <div id="ReaderPlus" class="readerplus" style="width: 100%; height: 100%"></div>
+</body>
+</html>
+
